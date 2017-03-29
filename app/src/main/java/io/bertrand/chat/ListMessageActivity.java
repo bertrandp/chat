@@ -13,15 +13,19 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 import io.bertrand.chat.model.Message;
 import io.bertrand.chat.service.ChatService;
+import io.bertrand.chat.service.ServiceGenerator;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static io.bertrand.chat.MainActivity.LOGIN;
 import static io.bertrand.chat.MainActivity.PASSWORD;
 import static io.bertrand.chat.MainActivity.PREFS_NAME;
+import static io.bertrand.chat.MainActivity.TOKEN;
 
 public class ListMessageActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -33,6 +37,9 @@ public class ListMessageActivity extends AppCompatActivity implements View.OnCli
     private ImageButton btnSend;
     private SwipeRefreshLayout swipeRefresh;
 
+    private SharedPreferences settings;
+    private ChatService chatService;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,11 +48,8 @@ public class ListMessageActivity extends AppCompatActivity implements View.OnCli
         recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
         recyclerView.setHasFixedSize(true);
 
-        // use a linear layout manager
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-
-        refreshMessage();
 
         editText = (EditText) findViewById(R.id.editmsg);
         btnSend = (ImageButton) findViewById(R.id.send);
@@ -59,6 +63,11 @@ public class ListMessageActivity extends AppCompatActivity implements View.OnCli
                 refreshMessage();
             }
         });
+
+        settings = getSharedPreferences(PREFS_NAME, 0);
+        chatService = ServiceGenerator.createService(ChatService.class, settings.getString(TOKEN,""));
+
+        refreshMessage();
     }
 
     @Override
@@ -72,14 +81,16 @@ public class ListMessageActivity extends AppCompatActivity implements View.OnCli
 
     private void refreshMessage() {
 
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        ChatService chatService = ChatService.retrofit.create(ChatService.class);
-        Call<List<Message>> call = chatService.messageList(settings.getString(LOGIN, "bertrand"), settings.getString(PASSWORD, "bertrand"));
+        Map<String, String> data = new HashMap<>();
+        data.put("limit", String.valueOf(30));
+        //data.put("page", String.valueOf(2));
+
+        Call<List<Message>> call = chatService.messageList(data);
         call.enqueue(new Callback<List<Message>>() {
             @Override
             public void onResponse(Call<List<Message>> call, Response<List<Message>> response) {
                 if (response.isSuccessful()) {
-                    Log.i(TAG, "success, response : " + response.toString());
+                    Log.i(TAG, "success, nb msg : " + response.body().size());
 
                     MessageAdapter messageAdapter = new MessageAdapter(response.body(), getApplicationContext());
                     recyclerView.setAdapter(messageAdapter);
@@ -92,15 +103,15 @@ public class ListMessageActivity extends AppCompatActivity implements View.OnCli
 
             @Override
             public void onFailure(Call<List<Message>> call, Throwable t) {
+                t.printStackTrace();
                 Log.i(TAG, "failure");
             }
         });
     }
 
     private void sendMessage() {
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        ChatService chatService = ChatService.retrofit.create(ChatService.class);
-        Call<Void> call = chatService.sendMessage(settings.getString(LOGIN, "bertrand"), settings.getString(PASSWORD, "bertrand"), new Message(settings.getString(LOGIN, "bertrand"), editText.getText().toString()));
+
+        Call<Void> call = chatService.sendMessage(new Message(settings.getString(LOGIN, "bertrand"), editText.getText().toString()));
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {

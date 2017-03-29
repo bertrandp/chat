@@ -2,13 +2,17 @@ package io.bertrand.chat;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.view.SimpleDraweeView;
 import io.bertrand.chat.model.Message;
 
 import java.util.List;
@@ -35,7 +39,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     @Override
     public MessageAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         // create a new view
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.message_view, parent, false);
+        View v = LayoutInflater.from(context).inflate(R.layout.message_view, parent, false);
         return new ViewHolder(v);
     }
 
@@ -46,8 +50,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         holder.msgTV.setText(dataset.get(position).getMessage());
         holder.loginTV.setText(dataset.get(position).getLogin());
 
-        SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
+        if(dataset.get(position).getImages() != null && dataset.get(position).getImages().size() > 0) {
+            Uri uri = Uri.parse(dataset.get(position).getImages().toString());
+            holder.img.setImageURI(uri);
+        } else {
+            holder.img.setVisibility(View.GONE);
+        }
 
+        SharedPreferences settings = context.getSharedPreferences(PREFS_NAME, 0);
         if (dataset.get(position).getLogin().equals(settings.getString(LOGIN, "login"))) {
 
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -71,11 +81,13 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public TextView loginTV;
         public TextView msgTV;
+        public SimpleDraweeView img;
 
         public ViewHolder(View v) {
             super(v);
             loginTV = (TextView) v.findViewById(R.id.login);
             msgTV = (TextView) v.findViewById(R.id.msgtxt);
+            img = (SimpleDraweeView) v.findViewById(R.id.image);
         }
     }
 }
