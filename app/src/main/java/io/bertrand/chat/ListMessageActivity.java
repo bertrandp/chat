@@ -1,28 +1,37 @@
 package io.bertrand.chat;
 
-import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import io.bertrand.chat.model.Message;
 import io.bertrand.chat.service.ChatService;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class ListMessageActivity extends AppCompatActivity {
+import java.util.List;
+
+import static io.bertrand.chat.MainActivity.LOGIN;
+import static io.bertrand.chat.MainActivity.PASSWORD;
+import static io.bertrand.chat.MainActivity.PREFS_NAME;
+
+public class ListMessageActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = ListMessageActivity.class.getSimpleName();
 
     private RecyclerView recyclerView;
     private RecyclerView.LayoutManager layoutManager;
+    private EditText editText;
+    private ImageButton btnSend;
+    private SwipeRefreshLayout swipeRefresh;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,27 +45,48 @@ public class ListMessageActivity extends AppCompatActivity {
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
+        refreshMessage();
 
+        editText = (EditText) findViewById(R.id.editmsg);
+        btnSend = (ImageButton) findViewById(R.id.send);
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
 
+        btnSend.setOnClickListener(this);
+
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                refreshMessage();
+            }
+        });
+    }
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.send:
+                sendMessage();
+                break;
+        }
+    }
+
+    private void refreshMessage() {
+
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         ChatService chatService = ChatService.retrofit.create(ChatService.class);
-
-        Call<List<Message>> call = chatService.messageList("bertrand", "bertrand");
+        Call<List<Message>> call = chatService.messageList(settings.getString(LOGIN, "bertrand"), settings.getString(PASSWORD, "bertrand"));
         call.enqueue(new Callback<List<Message>>() {
             @Override
             public void onResponse(Call<List<Message>> call, Response<List<Message>> response) {
-                if(response.isSuccessful()) {
-                    Log.i(TAG, "sucess");
+                if (response.isSuccessful()) {
+                    Log.i(TAG, "success, response : " + response.toString());
 
-                    List<Message> dataset = new ArrayList<>();
-                    dataset.add(new Message("jean", "yooooo"));
-                    dataset.add(new Message("claude", "salut"));
-                    dataset.add(new Message("dusssssss", "yes"));
-
-                    // specify an adapter
-                    MessageAdapter messageAdapter = new MessageAdapter(dataset);
+                    MessageAdapter messageAdapter = new MessageAdapter(response.body(), getApplicationContext());
                     recyclerView.setAdapter(messageAdapter);
+
+                    swipeRefresh.setRefreshing(false);
                 } else {
-                    Log.i(TAG, "error");
+                    Log.i(TAG, "error, response : " + response.toString());
                 }
             }
 
@@ -65,6 +95,23 @@ public class ListMessageActivity extends AppCompatActivity {
                 Log.i(TAG, "failure");
             }
         });
+    }
 
+    private void sendMessage() {
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        ChatService chatService = ChatService.retrofit.create(ChatService.class);
+        Call<Void> call = chatService.sendMessage(settings.getString(LOGIN, "bertrand"), settings.getString(PASSWORD, "bertrand"), new Message(settings.getString(LOGIN, "bertrand"), editText.getText().toString()));
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                Toast.makeText(ListMessageActivity.this, "Message send", Toast.LENGTH_SHORT).show();
+                editText.setText("");
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(ListMessageActivity.this, "Failed to send the message", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

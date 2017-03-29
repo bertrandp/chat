@@ -5,14 +5,10 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by Bertrand on 28/03/2017.
@@ -20,10 +16,9 @@ import static android.content.ContentValues.TAG;
 
 public class LoginTask extends AsyncTask<String, Void, Void> {
 
+    private static final String TAG = LoginTask.class.getSimpleName();
     private ProgressDialog progressDialog;
     private Context context;
-
-    private static final String TAG = LoginTask.class.getSimpleName();
 
     public LoginTask(Context context) {
         this.context = context;

@@ -1,11 +1,13 @@
 package io.bertrand.chat.model;
 
+import java.util.UUID;
+
 /**
  * Created by Bertrand on 28/03/2017.
  */
 public class Message {
 
-    String uuid;
+    UUID uuid;
     String login;
     String message;
 
@@ -13,15 +15,16 @@ public class Message {
     }
 
     public Message(String login, String message) {
+        this.uuid = UUID.randomUUID();
         this.login = login;
         this.message = message;
     }
 
-    public String getUuid() {
+    public UUID getUuid() {
         return uuid;
     }
 
-    public void setUuid(String uuid) {
+    public void setUuid(UUID uuid) {
         this.uuid = uuid;
     }
 
